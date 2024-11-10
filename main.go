@@ -8,6 +8,10 @@ import (
 	"syscall"
 )
 
+type InputHandler func(x, y int, width, height int) (int, int)
+
+var keyBindings map[byte]InputHandler
+
 func enableRawMode() (*term.State, error) {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -45,6 +49,19 @@ func getWindowSize() (int, int, error) {
 	return width, height, nil
 }
 
+func handleInput(input byte) InputHandler {
+	if handler, exists := keyBindings[input]; exists {
+		return handler
+	}
+	return func(x, y, width, height int) (int, int) {
+		return x, y
+	}
+}
+
+func addKeyBinding(key byte, handler InputHandler) {
+	keyBindings[key] = handler
+}
+
 func main() {
 	oldState, err := enableRawMode()
 	if err != nil {
@@ -66,6 +83,40 @@ func main() {
 	x := 1
 	y := 1
 
+	// Initialize key bindings map
+	keyBindings = make(map[byte]InputHandler)
+
+	// Define key bindings
+	addKeyBinding('q', func(x, y, width, height int) (int, int) {
+		clearScreen()
+		os.Exit(0)
+		return x, y
+	})
+	addKeyBinding('h', func(x, y, width, height int) (int, int) {
+		if x > 1 {
+			x--
+		}
+		return x, y
+	})
+	addKeyBinding('j', func(x, y, width, height int) (int, int) {
+		if y < height {
+			y++
+		}
+		return x, y
+	})
+	addKeyBinding('k', func(x, y, width, height int) (int, int) {
+		if y > 1 {
+			y--
+		}
+		return x, y
+	})
+	addKeyBinding('l', func(x, y, width, height int) (int, int) {
+		if x < width {
+			x++
+		}
+		return x, y
+	})
+
 	moveCursor(y, x)
 
 	for {
@@ -80,31 +131,9 @@ func main() {
 			fmt.Println(err)
 			break
 		}
-		switch input {
-		case 'q':
-			clearScreen()
-			os.Exit(0)
-		case 'h':
-			if x > 1 {
-				x--
-				moveCursor(y, x)
-			}
-		case 'j':
-			if y < height {
-				y++
-				moveCursor(y, x)
-			}
-		case 'k':
-			if y > 1 {
-				y--
-				moveCursor(y, x)
-			}
-		case 'l':
-			if x < width {
-				x++
-				moveCursor(y, x)
-			}
-		default:
-		}
+
+		handler := handleInput(input)
+		x, y = handler(x, y, width, height)
+		moveCursor(y, x)
 	}
 }
