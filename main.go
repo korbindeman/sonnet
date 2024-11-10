@@ -37,6 +37,14 @@ func readInput() (byte, error) {
 	return buf[0], nil
 }
 
+func getWindowSize() (int, int, error) {
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 0, 0, fmt.Errorf("error getting window size: %w", err)
+	}
+	return width, height, nil
+}
+
 func main() {
 	oldState, err := enableRawMode()
 	if err != nil {
@@ -45,7 +53,6 @@ func main() {
 	}
 	defer disableRawMode(oldState)
 
-	// Handle interrupt signals to restore terminal state
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -55,17 +62,49 @@ func main() {
 	}()
 
 	clearScreen()
-	moveCursor(1, 1)
+
+	x := 1
+	y := 1
+
+	moveCursor(y, x)
 
 	for {
+		width, height, err := getWindowSize()
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
 		input, err := readInput()
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
-		if input == 'q' {
-			break
+		switch input {
+		case 'q':
+			clearScreen()
+			os.Exit(0)
+		case 'h':
+			if x > 1 {
+				x--
+				moveCursor(y, x)
+			}
+		case 'j':
+			if y < height {
+				y++
+				moveCursor(y, x)
+			}
+		case 'k':
+			if y > 1 {
+				y--
+				moveCursor(y, x)
+			}
+		case 'l':
+			if x < width {
+				x++
+				moveCursor(y, x)
+			}
+		default:
 		}
-		fmt.Printf("You pressed: %q\r\n", input)
 	}
 }
