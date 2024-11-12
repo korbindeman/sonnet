@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"golang.org/x/term"
 	"os"
@@ -62,6 +63,44 @@ func addKeyBinding(key byte, handler InputHandler) {
 	keyBindings[key] = handler
 }
 
+func readFileContent(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %w", err)
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
+	return lines, nil
+}
+
+func loadAndDisplayFile(filePath string, width, height int) {
+	lines, err := readFileContent(filePath)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	clearScreen()
+	moveCursor(1, 1)
+	for i, line := range lines {
+		if i >= height-1 {
+			break
+		}
+		fmt.Print(line, "\r\n")
+	}
+	moveCursor(1, 1)
+}
+
 func main() {
 	oldState, err := enableRawMode()
 	if err != nil {
@@ -116,6 +155,72 @@ func main() {
 		}
 		return x, y
 	})
+	addKeyBinding('r', func(x, y, width, height int) (int, int) {
+		filePath := "example.txt"
+		loadAndDisplayFile(filePath, width, height)
+		return x, y
+	})
+	addKeyBinding(':', func(x, y, width, height int) (int, int) {
+		moveCursor(height, 1)
+		// clear the line
+		fmt.Print("\x1b[K")
+		fmt.Print(":")
+		filename := ""
+		for {
+			input, err := readInput()
+			if err != nil {
+				fmt.Println(err)
+				return x, y
+			}
+			if input == 13 {
+				break
+			}
+			if input == 27 {
+				moveCursor(height, 1)
+				fmt.Print("\x1b[K")
+				moveCursor(y, x)
+				return x, y
+			}
+			if input == 127 {
+				if len(filename) == 0 {
+					continue
+				}
+				filename = filename[:len(filename)-1]
+				fmt.Print("\b \b")
+				continue
+			}
+			filename += string(input)
+			fmt.Print(string(input))
+		}
+		x, y = 1, 1
+		moveCursor(y, x)
+		loadAndDisplayFile(filename, width, height)
+		return x, y
+	})
+	addKeyBinding('i', func(x, y, width, height int) (int, int) {
+		// insert mode
+		for {
+			input, err := readInput()
+			if err != nil {
+				fmt.Println(err)
+			}
+			if input == 27 {
+				break
+			}
+			if input == 127 {
+				fmt.Print("\b \b")
+				continue
+			}
+
+			fmt.Print(string(input))
+		}
+		return x, y
+	})
+
+	// _, height, err := getWindowSize()
+	// for i := 0; i < height; i++ {
+	// 	fmt.Print("\r\n", i+1)
+	// }
 
 	moveCursor(y, x)
 
