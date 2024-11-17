@@ -1,17 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"golang.org/x/term"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/korbindeman/sonnet/internal/buffer"
+	"github.com/korbindeman/sonnet/internal/keymaps"
+	"golang.org/x/term"
 )
 
 type InputHandler func(x, y int, width, height int) (int, int)
-
-var keyBindings map[byte]InputHandler
 
 func enableRawMode() (*term.State, error) {
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
@@ -50,55 +50,20 @@ func getWindowSize() (int, int, error) {
 	return width, height, nil
 }
 
-func handleInput(input byte) InputHandler {
+func handleInput(keyBindings keymaps.KeyBindings, input byte) keymaps.InputHandler {
 	if handler, exists := keyBindings[input]; exists {
 		return handler
 	}
-	return func(x, y, width, height int) (int, int) {
-		return x, y
-	}
+	return func(x, y, width, height int, buffer *buffer.Buffer) (int, int) { return x, y }
 }
 
-func addKeyBinding(key byte, handler InputHandler) {
-	keyBindings[key] = handler
-}
-
-func readFileContent(filePath string) ([]string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("could not open file: %w", err)
-	}
-	defer file.Close()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading file: %w", err)
-	}
-
-	return lines, nil
-}
-
-func loadAndDisplayFile(filePath string, width, height int) {
-	lines, err := readFileContent(filePath)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return
-	}
-
-	clearScreen()
-	moveCursor(1, 1)
-	for i, line := range lines {
+func displayBuffer(buffer *buffer.Buffer, width, height int) {
+	for i, line := range buffer.Rows() {
 		if i >= height-1 {
 			break
 		}
 		fmt.Print(line, "\r\n")
 	}
-	moveCursor(1, 1)
 }
 
 func main() {
@@ -122,48 +87,16 @@ func main() {
 	x := 1
 	y := 1
 
-	// Initialize key bindings map
-	keyBindings = make(map[byte]InputHandler)
+	keyBindings := keymaps.NewDefaultKeyBindings()
 
-	// Define key bindings
-	addKeyBinding('q', func(x, y, width, height int) (int, int) {
+	keyBindings.Add('q', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
 		clearScreen()
 		os.Exit(0)
 		return x, y
 	})
-	addKeyBinding('h', func(x, y, width, height int) (int, int) {
-		if x > 1 {
-			x--
-		}
-		return x, y
-	})
-	addKeyBinding('j', func(x, y, width, height int) (int, int) {
-		if y < height {
-			y++
-		}
-		return x, y
-	})
-	addKeyBinding('k', func(x, y, width, height int) (int, int) {
-		if y > 1 {
-			y--
-		}
-		return x, y
-	})
-	addKeyBinding('l', func(x, y, width, height int) (int, int) {
-		if x < width {
-			x++
-		}
-		return x, y
-	})
-	addKeyBinding('r', func(x, y, width, height int) (int, int) {
-		filePath := "example.txt"
-		loadAndDisplayFile(filePath, width, height)
-		return x, y
-	})
-	addKeyBinding(':', func(x, y, width, height int) (int, int) {
+	keyBindings.Add(':', func(x, y, width, height int, curbuffer *buffer.Buffer) (int, int) {
 		moveCursor(height, 1)
-		// clear the line
-		fmt.Print("\x1b[K")
+		fmt.Print("\x1b[K") // clear the line
 		fmt.Print(":")
 		filename := ""
 		for {
@@ -194,11 +127,12 @@ func main() {
 		}
 		x, y = 1, 1
 		moveCursor(y, x)
-		loadAndDisplayFile(filename, width, height)
+		newbuffer, _ := buffer.LoadFile(filename)
+		curbuffer.Replace(newbuffer)
+		displayBuffer(curbuffer, width, height)
 		return x, y
 	})
-	addKeyBinding('i', func(x, y, width, height int) (int, int) {
-		// insert mode
+	keyBindings.Add('i', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
 		for {
 			input, err := readInput()
 			if err != nil {
@@ -217,15 +151,17 @@ func main() {
 		return x, y
 	})
 
-	// _, height, err := getWindowSize()
-	// for i := 0; i < height; i++ {
-	// 	fmt.Print("\r\n", i+1)
-	// }
+	moveCursor(y, x)
+
+	buffer := buffer.NewBuffer()
+	buffer.InsertRow(0, "Hello, world!")
+	width, height, err := getWindowSize()
+	displayBuffer(buffer, width, height)
 
 	moveCursor(y, x)
 
 	for {
-		width, height, err := getWindowSize()
+		width, _, err := getWindowSize()
 		if err != nil {
 			fmt.Println(err)
 			break
@@ -237,8 +173,8 @@ func main() {
 			break
 		}
 
-		handler := handleInput(input)
-		x, y = handler(x, y, width, height)
+		handler := handleInput(keyBindings, input)
+		x, y = handler(x, y, width, height, buffer)
 		moveCursor(y, x)
 	}
 }
