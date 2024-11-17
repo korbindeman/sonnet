@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Buffer struct {
@@ -79,8 +80,10 @@ func LoadFile(filename string) (*Buffer, error) {
 		return nil, err
 	}
 
+	spaces := "    " // 4 spaces
 	for i, line := range lines {
-		buffer.InsertRow(i, line)
+		output := strings.ReplaceAll(line, "\t", spaces)
+		buffer.InsertRow(i, output)
 	}
 
 	return buffer, nil

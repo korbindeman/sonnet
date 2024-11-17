@@ -1,6 +1,10 @@
 package keymaps
 
-import "github.com/korbindeman/sonnet/internal/buffer"
+import (
+	"math"
+
+	"github.com/korbindeman/sonnet/internal/buffer"
+)
 
 type KeymapData struct {
 	X      int
@@ -34,17 +38,23 @@ func NewDefaultKeyBindings() KeyBindings {
 	keyBindings.Add('j', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
 		if y < buffer.Length() {
 			y++
+			if buffer.LineLength(y-1) < x {
+				x = int(math.Max(float64(buffer.LineLength(y-1)), 1))
+			}
 		}
 		return x, y
 	})
 	keyBindings.Add('k', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
 		if y > 1 {
 			y--
+			if buffer.LineLength(y-1) < x {
+				x = int(math.Max(float64(buffer.LineLength(y-1)), 1))
+			}
 		}
 		return x, y
 	})
 	keyBindings.Add('l', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		if x < width {
+		if x < buffer.LineLength(y-1) {
 			x++
 		}
 		return x, y

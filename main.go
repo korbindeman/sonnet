@@ -91,6 +91,8 @@ func main() {
 
 	keyBindings.Add('q', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
 		clearScreen()
+		disableRawMode(oldState)
+		moveCursor(0, 0)
 		os.Exit(0)
 		return x, y
 	})
@@ -126,6 +128,7 @@ func main() {
 			fmt.Print(string(input))
 		}
 		x, y = 1, 1
+		clearScreen()
 		moveCursor(y, x)
 		newbuffer, _ := buffer.LoadFile(filename)
 		curbuffer.Replace(newbuffer)
