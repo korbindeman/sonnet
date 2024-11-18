@@ -9,30 +9,23 @@ import (
 	"github.com/korbindeman/sonnet/internal/window"
 )
 
-type InputHandler func(x, y int, width, height int) (int, int)
-
 func handleInput(keyBindings keymaps.KeyBindings, input byte) keymaps.InputHandler {
 	if handler, exists := keyBindings[input]; exists {
 		return handler
 	}
-	return func(x, y, width, height int, buffer *buffer.Buffer) (int, int) { return x, y }
+	return func(win *window.Window) {}
 }
 
 func main() {
-	utils.EnableRawMode()
+	sonnet := Initialize()
+	defer sonnet.Close()
 
 	keyBindings := keymaps.NewDefaultKeyBindings()
 
+	buf, _ := buffer.LoadFile("main.go")
+
 	window := window.NewWindow()
-
-	buffer := buffer.NewBuffer()
-	buffer.InsertRow(0, "Hello, world!")
-
-	window.DisplayBuffer(buffer)
-
-	window.SetCursor()
-
-	x, y := window.Cursor.GetPosition()
+	window.LoadBuffer(buf)
 
 	for {
 		input, err := utils.ReadInput()
@@ -42,8 +35,7 @@ func main() {
 		}
 
 		handler := handleInput(keyBindings, input)
-		width, height := window.GetSize()
-		x, y = handler(x, y, width, height, buffer)
-		window.Cursor.Move(y, x)
+
+		handler(window)
 	}
 }

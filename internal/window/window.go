@@ -1,21 +1,22 @@
 package window
 
 import (
+	"fmt"
+
 	"github.com/korbindeman/sonnet/internal/buffer"
-	"github.com/korbindeman/sonnet/internal/editor"
 	"github.com/korbindeman/sonnet/internal/utils"
 )
 
 type Window struct {
 	height int
 	width  int
-	Cursor Cursor
+	Buffer buffer.Buffer
 }
 
 func NewWindow() *Window {
 	width, height, _ := utils.GetWindowSize()
 
-	window := &Window{height, width, *NewCursor()}
+	window := &Window{height, width, *buffer.NewBuffer()}
 
 	window.SetCursor()
 
@@ -27,9 +28,23 @@ func (w *Window) GetSize() (int, int) {
 }
 
 func (w *Window) SetCursor() {
-	utils.MoveCursor(w.Cursor.line, w.Cursor.col)
+	line, col := w.Buffer.GetCursor()
+	utils.MoveCursor(line, col)
 }
 
-func (w *Window) DisplayBuffer(buffer *buffer.Buffer) {
-	editor.DisplayBuffer(buffer, w.width, w.height)
+func (w *Window) DisplayBuffer() {
+	utils.ClearScreen()
+	utils.MoveCursor(1, 1)
+	for i, line := range w.Buffer.Rows() {
+		if i >= w.height-1 {
+			break
+		}
+		fmt.Print(line, "\r\n")
+	}
+	w.SetCursor()
+}
+
+func (w *Window) LoadBuffer(buffer *buffer.Buffer) {
+	w.Buffer = *buffer
+	w.DisplayBuffer()
 }

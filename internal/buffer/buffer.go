@@ -8,11 +8,14 @@ import (
 )
 
 type Buffer struct {
-	rows []string
+	rows       []string
+	line       int
+	col        int
+	virtualCol int
 }
 
 func NewBuffer() *Buffer {
-	return &Buffer{}
+	return &Buffer{line: 1, col: 1, virtualCol: 1}
 }
 
 func (b *Buffer) Rows() []string {
@@ -45,6 +48,10 @@ func (b *Buffer) Length() int {
 
 func (b *Buffer) LineLength(row int) int {
 	return len(b.rows[row])
+}
+
+func (b *Buffer) CurrentLineLength() int {
+	return len(b.rows[b.line-1])
 }
 
 func (b *Buffer) Replace(buffer *Buffer) {
@@ -80,7 +87,7 @@ func LoadFile(filename string) (*Buffer, error) {
 		return nil, err
 	}
 
-	spaces := "    " // 4 spaces
+	spaces := "    "
 	for i, line := range lines {
 		output := strings.ReplaceAll(line, "\t", spaces)
 		buffer.InsertRow(i, output)

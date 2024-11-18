@@ -2,15 +2,14 @@ package keymaps
 
 import (
 	"fmt"
-	"math"
 	"os"
 
 	"github.com/korbindeman/sonnet/internal/buffer"
-	"github.com/korbindeman/sonnet/internal/editor"
 	"github.com/korbindeman/sonnet/internal/utils"
+	"github.com/korbindeman/sonnet/internal/window"
 )
 
-type InputHandler func(x, y, width, height int, buffer *buffer.Buffer) (int, int)
+type InputHandler func(*window.Window)
 
 type KeyBindings map[byte]InputHandler
 
@@ -25,44 +24,31 @@ func (k KeyBindings) Add(key byte, handler InputHandler) {
 func NewDefaultKeyBindings() KeyBindings {
 	keyBindings := NewKeyBindings()
 
-	keyBindings.Add('h', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		if x > 1 {
-			x--
-		}
-		return x, y
+	keyBindings.Add('h', func(win *window.Window) {
+		win.Buffer.MoveLeft()
+		win.SetCursor()
 	})
-	keyBindings.Add('j', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		if y < buffer.Length() {
-			y++
-			if buffer.LineLength(y-1) < x {
-				x = int(math.Max(float64(buffer.LineLength(y-1)), 1))
-			}
-		}
-		return x, y
+	keyBindings.Add('j', func(win *window.Window) {
+		win.Buffer.MoveDown()
+		win.SetCursor()
 	})
-	keyBindings.Add('k', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		if y > 1 {
-			y--
-			if buffer.LineLength(y-1) < x {
-				x = int(math.Max(float64(buffer.LineLength(y-1)), 1))
-			}
-		}
-		return x, y
+	keyBindings.Add('k', func(win *window.Window) {
+		win.Buffer.MoveUp()
+		win.SetCursor()
 	})
-	keyBindings.Add('l', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		if x < buffer.LineLength(y-1) {
-			x++
-		}
-		return x, y
+	keyBindings.Add('l', func(win *window.Window) {
+		win.Buffer.MoveRight()
+		win.SetCursor()
 	})
 
-	keyBindings.Add('q', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
+	keyBindings.Add('q', func(win *window.Window) {
 		utils.ClearScreen()
 		utils.MoveCursor(0, 0)
 		os.Exit(0)
-		return x, y
 	})
-	keyBindings.Add(':', func(x, y, width, height int, curbuffer *buffer.Buffer) (int, int) {
+
+	keyBindings.Add(':', func(win *window.Window) {
+		_, height := win.GetSize()
 		utils.MoveCursor(height, 1)
 		fmt.Print("\x1b[K") // clear the line
 		fmt.Print(":")
@@ -71,7 +57,6 @@ func NewDefaultKeyBindings() KeyBindings {
 			input, err := utils.ReadInput()
 			if err != nil {
 				fmt.Println(err)
-				return x, y
 			}
 			if input == 13 {
 				break
@@ -79,8 +64,7 @@ func NewDefaultKeyBindings() KeyBindings {
 			if input == 27 {
 				utils.MoveCursor(height, 1)
 				fmt.Print("\x1b[K")
-				utils.MoveCursor(y, x)
-				return x, y
+				win.SetCursor()
 			}
 			if input == 127 {
 				if len(filename) == 0 {
@@ -93,31 +77,11 @@ func NewDefaultKeyBindings() KeyBindings {
 			filename += string(input)
 			fmt.Print(string(input))
 		}
-		x, y = 1, 1
-		utils.ClearScreen()
-		utils.MoveCursor(y, x)
 		newbuffer, _ := buffer.LoadFile(filename)
-		curbuffer.Replace(newbuffer)
-		editor.DisplayBuffer(curbuffer, width, height)
-		return x, y
+		win.LoadBuffer(newbuffer)
 	})
-	keyBindings.Add('i', func(x, y, width, height int, buffer *buffer.Buffer) (int, int) {
-		for {
-			input, err := utils.ReadInput()
-			if err != nil {
-				fmt.Println(err)
-			}
-			if input == 27 {
-				break
-			}
-			if input == 127 {
-				fmt.Print("\b \b")
-				continue
-			}
 
-			fmt.Print(string(input))
-		}
-		return x, y
+	keyBindings.Add('i', func(win *window.Window) {
 	})
 
 	return keyBindings

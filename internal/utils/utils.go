@@ -3,23 +3,9 @@ package utils
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"golang.org/x/term"
 )
-
-func EnableRawMode() (*term.State, error) {
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return nil, err
-	}
-	return oldState, nil
-}
-
-func DisableRawMode(oldState *term.State) {
-	term.Restore(int(os.Stdin.Fd()), oldState)
-}
 
 func ClearScreen() {
 	fmt.Print("\x1b[2J")
@@ -46,21 +32,16 @@ func GetWindowSize() (int, int, error) {
 	return width, height, nil
 }
 
-func Initialize() {
-	oldState, err := EnableRawMode()
-	if err != nil {
-		fmt.Println("Error enabling raw mode:", err)
-		return
+func Min(a, b int) int {
+	if a < b {
+		return a
 	}
-	defer DisableRawMode(oldState)
+	return b
+}
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		DisableRawMode(oldState)
-		os.Exit(0)
-	}()
-
-	ClearScreen()
+func Max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
