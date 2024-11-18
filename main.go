@@ -2,14 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/korbindeman/sonnet/internal/buffer"
-	"github.com/korbindeman/sonnet/internal/editor"
 	"github.com/korbindeman/sonnet/internal/keymaps"
 	"github.com/korbindeman/sonnet/internal/utils"
+	"github.com/korbindeman/sonnet/internal/window"
 )
 
 type InputHandler func(x, y int, width, height int) (int, int)
@@ -22,44 +19,22 @@ func handleInput(keyBindings keymaps.KeyBindings, input byte) keymaps.InputHandl
 }
 
 func main() {
-	oldState, err := utils.EnableRawMode()
-	if err != nil {
-		fmt.Println("Error enabling raw mode:", err)
-		return
-	}
-	defer utils.DisableRawMode(oldState)
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		utils.DisableRawMode(oldState)
-		os.Exit(0)
-	}()
-
-	utils.ClearScreen()
-
-	x := 1
-	y := 1
+	utils.EnableRawMode()
 
 	keyBindings := keymaps.NewDefaultKeyBindings()
 
-	utils.MoveCursor(y, x)
+	window := window.NewWindow()
 
 	buffer := buffer.NewBuffer()
 	buffer.InsertRow(0, "Hello, world!")
-	width, height, err := utils.GetWindowSize()
-	editor.DisplayBuffer(buffer, width, height)
 
-	utils.MoveCursor(y, x)
+	window.DisplayBuffer(buffer)
+
+	window.SetCursor()
+
+	x, y := window.Cursor.GetPosition()
 
 	for {
-		width, _, err := utils.GetWindowSize()
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-
 		input, err := utils.ReadInput()
 		if err != nil {
 			fmt.Println(err)
@@ -67,7 +42,8 @@ func main() {
 		}
 
 		handler := handleInput(keyBindings, input)
+		width, height := window.GetSize()
 		x, y = handler(x, y, width, height, buffer)
-		utils.MoveCursor(y, x)
+		window.Cursor.Move(y, x)
 	}
 }
