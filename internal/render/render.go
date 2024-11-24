@@ -12,7 +12,7 @@ type Coord struct {
 	Col  int
 }
 
-func NewCoordinate(line, col int) *Coord {
+func NewCoord(line, col int) *Coord {
 	return &Coord{line, col}
 }
 

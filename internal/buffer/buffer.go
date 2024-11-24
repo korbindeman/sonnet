@@ -51,8 +51,12 @@ func (b *Buffer) LineLength(row int) int {
 	return len(b.rows[row])
 }
 
+func (b *Buffer) CurrentLineIndex() int {
+	return b.cursor.Line - 1
+}
+
 func (b *Buffer) CurrentLineLength() int {
-	return len(b.rows[b.cursor.Line])
+	return len(b.rows[b.CurrentLineIndex()])
 }
 
 func (b *Buffer) Replace(buffer *Buffer) {

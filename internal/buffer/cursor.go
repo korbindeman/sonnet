@@ -16,7 +16,7 @@ func (b *Buffer) SetCursor(line, col int) {
 }
 
 func (b *Buffer) MoveDown() {
-	if b.cursor.Line+1 < b.Length() {
+	if b.cursor.Line+1 <= b.Length() {
 		b.cursor.Line++
 	}
 	if b.CurrentLineLength() < b.cursor.Col {

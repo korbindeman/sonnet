@@ -57,13 +57,13 @@ func NewDefaultKeyBindings() KeyBindings {
 
 	keyBindings.Add('q', func(win *window.Window) {
 		render.ClearScreen()
-		render.MoveCursor(render.NewCoordinate(0, 0))
+		render.MoveCursor(render.NewCoord(0, 0))
 		os.Exit(0)
 	})
 
 	keyBindings.Add(':', func(win *window.Window) {
 		_, height := win.GetSize()
-		render.MoveCursor(render.NewCoordinate(height, 1))
+		render.MoveCursor(render.NewCoord(height, 1))
 		render.ClearLine()
 		fmt.Print(":")
 		filename := ""
@@ -87,7 +87,7 @@ func NewDefaultKeyBindings() KeyBindings {
 				win.LoadBuffer(newBuffer)
 				return
 			case KeyEscape:
-				render.MoveCursor(render.NewCoordinate(height, 1))
+				render.MoveCursor(render.NewCoord(height, 1))
 				render.ClearLine()
 				win.SetCursor()
 				return

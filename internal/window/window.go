@@ -46,16 +46,28 @@ func (w *Window) SetCursor() {
 }
 
 func (w *Window) moveCursor(coord render.Coord) {
-	line := coord.Line + w.anchor.Line - 1
-	col := coord.Col + w.anchor.Col - 1
-	render.MoveCursor(render.NewCoordinate(line, col))
+	if coord.Line < 0 {
+		coord.Line = 0
+	}
+	if coord.Col < 0 {
+		coord.Col = 0
+	}
+	if coord.Line >= w.height {
+		coord.Line = w.height - 1
+	}
+	if coord.Col >= w.width {
+		coord.Col = w.width - 1
+	}
+	line := coord.Line + w.anchor.Line
+	col := coord.Col + w.anchor.Col
+	render.MoveCursor(render.NewCoord(line, col))
 }
 
 func (w *Window) moveCursorWithLineNumbers(coord render.Coord) {
 	lineNumLen := 5
 	line := coord.Line + w.anchor.Line - 1
-	col := coord.Col + w.anchor.Col - 1 + lineNumLen
-	render.MoveCursor(render.NewCoordinate(line, col))
+	col := coord.Col + w.anchor.Col + lineNumLen
+	render.MoveCursor(render.NewCoord(line, col))
 }
 
 func renderLine(line string, lineNum int, termination string) {
@@ -70,7 +82,7 @@ func (w *Window) DisplayBuffer() {
 			break
 		}
 		w.moveCursor(render.Coord{Line: i, Col: 1})
-		renderLine(line, i, "\r\n")
+		renderLine(line, i+1, "\r\n")
 	}
 	w.SetCursor()
 }
