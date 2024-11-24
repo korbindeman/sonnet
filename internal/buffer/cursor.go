@@ -1,6 +1,8 @@
 package buffer
 
 import (
+	"math"
+
 	"github.com/korbindeman/sonnet/internal/render"
 	"github.com/korbindeman/sonnet/internal/utils"
 )
@@ -46,6 +48,9 @@ func (b *Buffer) MoveRight() {
 		b.cursor.Col++
 	}
 	b.virtualCol = b.cursor.Col
+	if b.CurrentLineLength() == b.cursor.Col && b.CurrentLineLength() > 0 {
+		b.virtualCol = math.MaxInt
+	}
 }
 
 func (b *Buffer) MoveLeft() {
