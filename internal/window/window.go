@@ -52,19 +52,16 @@ func (w *Window) moveCursor(coord render.Coord) {
 		coord.Line = 1
 		w.ScrollUp()
 	}
-	if coord.Col < 1 {
-		coord.Col = 1
-	}
 	if coord.Line > w.height {
 		coord.Line = w.height
 		w.ScrollDown()
 	}
-	if coord.Col > w.width {
-		coord.Col = w.width
-	}
+
+	// TODO: handle col
 
 	line := coord.Line + w.anchor.Line
 	col := coord.Col + w.anchor.Col
+
 	render.MoveCursor(render.NewCoord(line, col))
 }
 
@@ -75,8 +72,11 @@ func (w *Window) moveCursorWithLineNumbers(coord render.Coord) {
 	w.moveCursor(render.Coord{Line: line, Col: col})
 }
 
-func renderLine(line string, lineNum int, termination string) {
+func (w *Window) renderLine(line string, lineNum int, termination string) {
 	fmt.Printf("%4d ", lineNum)
+	if len(line) > w.width-5 {
+		line = line[:w.width-5]
+	}
 	fmt.Print(line, termination)
 }
 
@@ -89,7 +89,7 @@ func (w *Window) DisplayBuffer() {
 		}
 		line := w.Buffer.Rows()[indexWithOffset]
 		w.moveCursor(render.Coord{Line: i + 1, Col: 1})
-		renderLine(line, indexWithOffset+1, "\r\n")
+		w.renderLine(line, indexWithOffset+1, "\r\n")
 	}
 	w.SetCursor()
 }
