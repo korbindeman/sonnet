@@ -5,13 +5,27 @@ import (
 	"os"
 
 	"github.com/korbindeman/sonnet/internal/buffer"
-	"github.com/korbindeman/sonnet/internal/utils"
+	"github.com/korbindeman/sonnet/internal/io"
+	"github.com/korbindeman/sonnet/internal/render"
 	"github.com/korbindeman/sonnet/internal/window"
 )
 
 type InputHandler func(*window.Window)
 
 type KeyBindings map[byte]InputHandler
+
+const (
+	KeyEnter     = 13
+	KeyEscape    = 27
+	KeyBackspace = 127
+)
+
+func HandleInput(keyBindings KeyBindings, input byte) InputHandler {
+	if handler, exists := keyBindings[input]; exists {
+		return handler
+	}
+	return func(win *window.Window) {}
+}
 
 func NewKeyBindings() KeyBindings {
 	return make(KeyBindings)
@@ -42,46 +56,55 @@ func NewDefaultKeyBindings() KeyBindings {
 	})
 
 	keyBindings.Add('q', func(win *window.Window) {
-		utils.ClearScreen()
-		utils.MoveCursor(0, 0)
+		render.ClearScreen()
+		render.MoveCursor(render.NewCoordinate(0, 0))
 		os.Exit(0)
 	})
 
 	keyBindings.Add(':', func(win *window.Window) {
 		_, height := win.GetSize()
-		utils.MoveCursor(height, 1)
-		fmt.Print("\x1b[K") // clear the line
+		render.MoveCursor(render.NewCoordinate(height, 1))
+		render.ClearLine()
 		fmt.Print(":")
 		filename := ""
 		for {
-			input, err := utils.ReadInput()
+			input, err := io.ReadInput()
 			if err != nil {
-				fmt.Println(err)
-			}
-			if input == 13 {
-				break
-			}
-			if input == 27 {
-				utils.MoveCursor(height, 1)
-				fmt.Print("\x1b[K")
-				win.SetCursor()
-			}
-			if input == 127 {
-				if len(filename) == 0 {
-					continue
-				}
-				filename = filename[:len(filename)-1]
-				fmt.Print("\b \b")
+				fmt.Println("Input error:", err)
 				continue
 			}
-			filename += string(input)
-			fmt.Print(string(input))
+			switch input {
+			case KeyEnter:
+				if filename == "" {
+					fmt.Println("No filename provided")
+					return
+				}
+				newBuffer, err := buffer.LoadFile(filename)
+				if err != nil {
+					fmt.Printf("Error loading file: %v\n", err)
+					return
+				}
+				win.LoadBuffer(newBuffer)
+				return
+			case KeyEscape:
+				render.MoveCursor(render.NewCoordinate(height, 1))
+				render.ClearLine()
+				win.SetCursor()
+				return
+			case KeyBackspace:
+				if len(filename) > 0 {
+					filename = filename[:len(filename)-1]
+					fmt.Print("\b \b")
+				}
+			default:
+				filename += string(input)
+				fmt.Print(string(input))
+			}
 		}
-		newbuffer, _ := buffer.LoadFile(filename)
-		win.LoadBuffer(newbuffer)
 	})
 
 	keyBindings.Add('i', func(win *window.Window) {
+		// TODO: Implement insert mode functionality
 	})
 
 	return keyBindings

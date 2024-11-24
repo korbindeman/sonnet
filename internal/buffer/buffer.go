@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/korbindeman/sonnet/internal/render"
 )
 
 type Buffer struct {
 	rows       []string
-	line       int
-	col        int
+	cursor     render.Coord
 	virtualCol int
 }
 
 func NewBuffer() *Buffer {
-	return &Buffer{line: 1, col: 1, virtualCol: 1}
+	return &Buffer{cursor: render.Coord{Line: 1, Col: 1}, virtualCol: 1}
 }
 
 func (b *Buffer) Rows() []string {
@@ -51,7 +52,7 @@ func (b *Buffer) LineLength(row int) int {
 }
 
 func (b *Buffer) CurrentLineLength() int {
-	return len(b.rows[b.line-1])
+	return len(b.rows[b.cursor.Line])
 }
 
 func (b *Buffer) Replace(buffer *Buffer) {
