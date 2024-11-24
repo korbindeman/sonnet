@@ -42,5 +42,5 @@ func GetTerminalSize() (int, int, error) {
 }
 
 func MoveCursor(coord *Coord) {
-	fmt.Printf("\x1b[%d;%dH", coord.Line, coord.Col)
+	fmt.Printf("\x1b[%d;%dH", coord.Line-1, coord.Col-1)
 }
